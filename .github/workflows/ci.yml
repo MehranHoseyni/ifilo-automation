@@ -1,5 +1,6 @@
 name: Ifilo Trend Uploader
 
+# اجرا به دو حالت: دستی و زمان‌بندی شده (هر 4 ساعت)
 on:
   workflow_dispatch:
   schedule:
@@ -9,23 +10,29 @@ jobs:
   upload-trends:
     runs-on: ubuntu-latest
     env:
-      IFILO_USER: ${{ secrets.IFILO_USER }}
-      IFILO_PASS: ${{ secrets.IFILO_PASS }}
-      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-      MAX_VIDEOS: ${{ secrets.MAX_VIDEOS }}
+      IFILO_USER:       ${{ secrets.IFILO_USER }}
+      IFILO_PASS:       ${{ secrets.IFILO_PASS }}
+      YOUTUBE_API_KEY:  ${{ secrets.YOUTUBE_API_KEY }}
+      MAX_VIDEOS:       ${{ secrets.MAX_VIDEOS }}
     steps:
+      # 1) دریافت سورس از مخزن
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2) نصب پایتون
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
+      # 3) نصب وابستگی‌ها
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run automation script
-        run: python main.py
+      # 4) اجرای دانلود و آپلود
+      - name: Run downloader and uploader
+        run: |
+          python downloader.py
+          python uploader.py
