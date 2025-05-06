@@ -1,39 +1,31 @@
 import os
-import time
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
+import requests
 
 IFILO_USER = os.getenv("IFILO_USER")
 IFILO_PASS = os.getenv("IFILO_PASS")
+UPLOAD_URL = "https://ifilo.net/api/upload"
 DOWNLOAD_DIR = "downloads"
 
-options = Options()
-options.headless = True
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
+def authenticate():
+    # فرض بر این است که iFilo از Basic Auth استفاده می‌کند
+    return (IFILO_USER, IFILO_PASS)
 
-def login(driver):
-    driver.get("https://ifilo.net/login")
-    time.sleep(2)
-    driver.find_element(By.NAME, "username").send_keys(IFILO_USER)
-    driver.find_element(By.NAME, "password").send_keys(IFILO_PASS)
-    driver.find_element(By.XPATH, "//button[contains(text(),'ورود')]").click()
-    time.sleep(4)
+def upload_video(file_path):
+    with open(file_path, 'rb') as f:
+        files = {'file': f}
+        response = requests.post(UPLOAD_URL, files=files, auth=authenticate())
+        response.raise_for_status()
+        print(f"Uploaded: {os.path.basename(file_path)}")
 
-def upload_all():
-    driver = webdriver.Chrome(options=options)
-    try:
-        login(driver)
-        for fname in os.listdir(DOWNLOAD_DIR):
-            if fname.endswith('.mp4'):
-                path = os.path.join(DOWNLOAD_DIR, fname)
-                driver.get("https://ifilo.net/upload")
-                time.sleep(2)
-                driver.find_element(By.NAME, "title").send_keys(fname)
-                driver.find_element(By.NAME, "file").send_keys(path)
-                driver.find_element(By.XPATH, "//button[contains(text(),'آپلود')]").click()
-                time.sleep(5)
-                print(f"Uploaded: {fname}")
-    finally:
-        driver.quit()
+def main():
+    print("Starting upload process...")
+    if not os.path.exists(DOWNLOAD_DIR):
+        print("Download directory does not exist.")
+        return
+    for filename in os.listdir(DOWNLOAD_DIR):
+        if filename.endswith(".mp4"):
+            file_path = os.path.join(DOWNLOAD_DIR, filename)
+            upload_video(file_path)
+
+if __name__ == "__main__":
+    main()
