@@ -1,38 +1,47 @@
-name: Ifilo Trend Uploader
+name: Ifilo Automation
 
-# اجرا به دو حالت: دستی و زمان‌بندی شده (هر 4 ساعت)
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: '0 9 * * *'  # اجرای روزانه در ساعت ۹ صبح به وقت UTC
+  workflow_dispatch:      # امکان اجرای دستی
 
 jobs:
-  upload-trends:
+  run-scripts:
     runs-on: ubuntu-latest
+
     env:
-      IFILO_USER:       ${{ secrets.IFILO_USER }}
-      IFILO_PASS:       ${{ secrets.IFILO_PASS }}
-      YOUTUBE_API_KEY:  ${{ secrets.YOUTUBE_API_KEY }}
-      MAX_VIDEOS:       ${{ secrets.MAX_VIDEOS }}
+      IFILO_USER: ${{ secrets.IFILO_USER }}
+      IFILO_PASS: ${{ secrets.IFILO_PASS }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      MAX_VIDEOS: ${{ secrets.MAX_VIDEOS }}
+
     steps:
-      # 1) دریافت سورس از مخزن
-      - name: Checkout repository
+      - name: دریافت کد منبع
         uses: actions/checkout@v3
 
-      # 2) نصب پایتون
-      - name: Set up Python
+      - name: تنظیم محیط پایتون
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # 3) نصب وابستگی‌ها
-      - name: Install dependencies
+      - name: نصب وابستگی‌ها
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # 4) اجرای دانلود و آپلود
-      - name: Run downloader and uploader
+      - name: اجرای downloader.py
         run: |
+          echo "شروع اجرای downloader.py"
           python downloader.py
+        continue-on-error: true
+
+      - name: بررسی وجود فایل‌های ویدیو
+        run: |
+          echo "فایل‌های موجود در پوشه فعلی:"
+          ls -lah
+
+      - name: اجرای uploader.py
+        run: |
+          echo "شروع اجرای uploader.py"
           python uploader.py
+        continue-on-error: true
