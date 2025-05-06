@@ -1,25 +1,34 @@
 import os
-from googleapiclient.discovery import build
-import yt_dlp
+import requests
+from pytube import YouTube
 
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
-TREND_REGION = "IR"
-MAX_RESULTS = int(os.getenv("MAX_VIDEOS", 5))
+API_KEY = os.getenv("YOUTUBE_API_KEY")
+MAX_VIDEOS = int(os.getenv("MAX_VIDEOS", 3))
+SEARCH_QUERY = "motivational speech"
 DOWNLOAD_DIR = "downloads"
 
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+def search_videos(query, max_results):
+    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q={query}&maxResults={max_results}&key={API_KEY}"
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json().get("items", [])
 
-def download_trends():
-    youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
-    response = youtube.videos().list(
-        part="snippet,contentDetails",
-        chart="mostPopular",
-        regionCode=TREEND_REGION,
-        maxResults=MAX_RESULTS
-    ).execute()
-    videos = [(item["id"], item["snippet"]["title"]) for item in response.get("items", [])]
-    for vid, title in videos:
-        out_path = os.path.join(DOWNLOAD_DIR, f"{vid}.mp4")
-        if not os.path.exists(out_path):
-            yt_dlp.YoutubeDL({'outtmpl': out_path,'format': 'bestvideo+bestaudio'}).download([f"https://www.youtube.com/watch?v={vid}"])
-        print(f"Downloaded: {title}")
+def download_video(video_id, title):
+    yt_url = f"https://www.youtube.com/watch?v={video_id}"
+    yt = YouTube(yt_url)
+    stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
+    if not os.path.exists(DOWNLOAD_DIR):
+        os.makedirs(DOWNLOAD_DIR)
+    stream.download(output_path=DOWNLOAD_DIR, filename=f"{title}.mp4")
+    print(f"Downloaded: {title}")
+
+def main():
+    print("Starting download process...")
+    videos = search_videos(SEARCH_QUERY, MAX_VIDEOS)
+    for video in videos:
+        video_id = video["id"]["videoId"]
+        title = video["snippet"]["title"].replace("/", "_").replace("\\", "_")
+        download_video(video_id, title)
+
+if __name__ == "__main__":
+    main()
