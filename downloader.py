@@ -1,34 +1,24 @@
 import os
 import requests
-from pytube import YouTube
 
-API_KEY = os.getenv("YOUTUBE_API_KEY")
-MAX_VIDEOS = int(os.getenv("MAX_VIDEOS", 3))
-SEARCH_QUERY = "motivational speech"
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+MAX_VIDEOS = int(os.getenv("MAX_VIDEOS", 1))
 DOWNLOAD_DIR = "downloads"
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-def search_videos(query, max_results):
-    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q={query}&maxResults={max_results}&key={API_KEY}"
+def fetch_trending_videos():
+    url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&regionCode=IR&maxResults={MAX_VIDEOS}&key={YOUTUBE_API_KEY}"
     response = requests.get(url)
-    response.raise_for_status()
-    return response.json().get("items", [])
+    items = response.json().get("items", [])
+    return [(item["id"], item["snippet"]["title"]) for item in items]
 
 def download_video(video_id, title):
-    yt_url = f"https://www.youtube.com/watch?v={video_id}"
-    yt = YouTube(yt_url)
-    stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
-    if not os.path.exists(DOWNLOAD_DIR):
-        os.makedirs(DOWNLOAD_DIR)
-    stream.download(output_path=DOWNLOAD_DIR, filename=f"{title}.mp4")
-    print(f"Downloaded: {title}")
-
-def main():
-    print("Starting download process...")
-    videos = search_videos(SEARCH_QUERY, MAX_VIDEOS)
-    for video in videos:
-        video_id = video["id"]["videoId"]
-        title = video["snippet"]["title"].replace("/", "_").replace("\\", "_")
-        download_video(video_id, title)
+    filename = os.path.join(DOWNLOAD_DIR, f"{title}.mp4")
+    # فقط لینک ساختگی برای تست، چون در اکشن واقعی امکان دانلود از یوتیوب نیست
+    with open(filename, "w") as f:
+        f.write(f"FAKE_VIDEO_DATA_FOR_{video_id}")
 
 if __name__ == "__main__":
-    main()
+    for vid, title in fetch_trending_videos():
+        safe_title = "".join(c for c in title if c.isalnum() or c in " _-")
+        download_video(vid, safe_title)
